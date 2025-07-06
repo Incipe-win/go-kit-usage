@@ -1,0 +1,35 @@
+version: v2
+managed:
+  enabled: true
+  disable:
+    - file_option: go_package
+      module: buf.build/googleapis/googleapis
+  override:
+    - file_option: go_package_prefix
+      value: addsrv3/proto
+plugins:
+  - local: protoc-gen-go
+    out: proto
+    opt: paths=source_relative
+
+  - local: protoc-gen-connect-go
+    out: proto
+    opt: paths=source_relative
+
+  - local: protoc-gen-go-grpc
+    out: proto
+    opt:
+      - paths=source_relative
+      - require_unimplemented_servers=false
+
+  - local: protoc-gen-grpc-gateway
+    out: proto/gateway
+    opt:
+      - paths=import
+      - module=addsrv3/proto
+      - standalone=true
+
+  - local: protoc-gen-openapiv2
+    out: third_party/OpenAPI
+    opt:
+      - json_names_for_fields=false
