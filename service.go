@@ -188,7 +188,7 @@ func getTrimServiceFromConsul(consulAddr string, logger log.Logger, srvName stri
 }
 
 func factory(instance string) (endpoint.Endpoint, io.Closer, error) {
-	client := protoconnect.NewTrimClient(http.DefaultClient, instance)
+	client := protoconnect.NewTrimClient(http.DefaultClient, "http://"+instance)
 	e := makeTrimEndpoint(client)
 	return e, nil, nil
 }
