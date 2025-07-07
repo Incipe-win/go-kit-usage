@@ -7,6 +7,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/metrics"
 	"github.com/go-kit/log"
 )
@@ -24,6 +25,7 @@ type addService struct {
 var (
 	ErrOverflow    = errors.New("overflow")
 	ErrEmptyString = errors.New("empty string")
+	ErrInternal    = errors.New("internal error")
 )
 
 // Sum 返回两个数的和
@@ -115,4 +117,39 @@ func (im *instrumentingMiddleware) Concat(ctx context.Context, a, b string) (res
 	}(time.Now())
 	res, err = im.next.Concat(ctx, a, b)
 	return
+}
+
+type withTrimMiddleware struct {
+	next        AddService
+	trimService endpoint.Endpoint
+}
+
+func NewServiceWithTrim(trimEndpoint endpoint.Endpoint, srv AddService) AddService {
+	return &withTrimMiddleware{
+		trimService: trimEndpoint,
+		next:        srv,
+	}
+}
+
+// 为 withTrimMiddleware 实现 AddService 接口
+func (tm *withTrimMiddleware) Sum(ctx context.Context, a, b int) (res int, err error) {
+	return tm.next.Sum(ctx, a, b)
+}
+
+func (tm *withTrimMiddleware) Concat(ctx context.Context, a, b string) (res string, err error) {
+	// 需要新的逻辑处理
+	// 外部调用我们的Concat方法时
+	// 1. 发起RPC调用 trim_service 对数据进行处理 （调用其他服务/依赖其他的服务）
+	respA, err := tm.trimService(ctx, TrimRequest{S: a})
+	if err != nil {
+		return "", err
+	}
+	respB, err := tm.trimService(ctx, TrimRequest{S: b})
+	if err != nil {
+		return "", err
+	}
+	trimA, trimB := respA.(TrimResponse), respB.(TrimResponse)
+
+	// 2. 拿到处理后的数据再拼接
+	return tm.next.Concat(ctx, trimA.S, trimB.S)
 }

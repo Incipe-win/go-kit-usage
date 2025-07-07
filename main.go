@@ -70,6 +70,11 @@ func main() {
 		next:           srv,
 	}
 
+	// trim Service
+	client := protoconnect.NewTrimClient(http.DefaultClient, "http://localhost:9999")
+	trimEndpoint := makeTrimEndpoint(client)
+	srv = NewServiceWithTrim(trimEndpoint, srv)
+
 	gs := NewGRPCServer(srv, logger)
 
 	// gateway服务

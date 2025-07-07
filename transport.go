@@ -50,7 +50,7 @@ func NewGRPCServer(srv AddService, logger log.Logger) protoconnect.AddHandler {
 func (s *grpcServer) Sum(ctx context.Context, request *connect.Request[proto.SumRequest]) (*connect.Response[proto.SumResponse], error) {
 	_, resp, err := s.sum.ServeGRPC(ctx, request)
 	if err != nil {
-		return nil, err
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 	return resp.(*connect.Response[proto.SumResponse]), nil
 }
@@ -58,7 +58,7 @@ func (s *grpcServer) Sum(ctx context.Context, request *connect.Request[proto.Sum
 func (s *grpcServer) Concat(ctx context.Context, request *connect.Request[proto.ConcatRequest]) (*connect.Response[proto.ConcatResponse], error) {
 	_, resp, err := s.concat.ServeGRPC(ctx, request)
 	if err != nil {
-		return nil, err
+		return nil, connect.NewError(connect.CodeInternal, err)
 	}
 	return resp.(*connect.Response[proto.ConcatResponse]), nil
 }
@@ -112,3 +112,16 @@ func NewHTTPServer(gatewayAddr string) http.Handler {
 	}
 	return mux
 }
+
+// // encodeTrimRequest 将内部结构体转为protobuf中的结构体
+// // 对外发起gRPC请求
+// func encodeTrimRequest(_ context.Context, request any) (any, error) {
+// 	req := request.(TrimRequest)
+// 	return connect.NewRequest(&proto.TrimRequest{S: req.S}), nil
+// }
+
+// // decodeTrimResponse 将收到的gRPC响应转为内部的响应结构体
+// func decodeTrimResponse(_ context.Context, response any) (any, error) {
+// 	resp := response.(*connect.Response[proto.TrimResponse])
+// 	return &TrimResponse{S: resp.Msg.S}, nil
+// }

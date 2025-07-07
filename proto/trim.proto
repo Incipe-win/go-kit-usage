@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package addsrv;
+
+service Trim {
+    rpc TrimSpace(TrimRequest) returns (TrimResponse);
+}
+
+// TrimSpace 方法的请求参数
+message TrimRequest {
+    string s = 1;
+}
+
+// TrimSpace 方法的响应
+message TrimResponse {
+    string s = 1;
+}
