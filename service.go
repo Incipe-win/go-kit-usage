@@ -1,15 +1,23 @@
 package main
 
 import (
+	"addsrv3/proto/protoconnect"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"math"
+	"net/http"
 	"time"
 
 	"github.com/go-kit/kit/endpoint"
 	"github.com/go-kit/kit/metrics"
+	"github.com/go-kit/kit/sd"
 	"github.com/go-kit/log"
+
+	sdconsul "github.com/go-kit/kit/sd/consul"
+	"github.com/go-kit/kit/sd/lb"
+	consulapi "github.com/hashicorp/consul/api"
 )
 
 // 1 业务逻辑抽象为接口
@@ -152,4 +160,35 @@ func (tm *withTrimMiddleware) Concat(ctx context.Context, a, b string) (res stri
 
 	// 2. 拿到处理后的数据再拼接
 	return tm.next.Concat(ctx, trimA.S, trimB.S)
+}
+
+// consul 从注册中心获取 trim 服务的地址
+func getTrimServiceFromConsul(consulAddr string, logger log.Logger, srvName string, tags []string) (endpoint.Endpoint, error) {
+	// 1. 连接 consul
+	cfg := consulapi.DefaultConfig()
+	cfg.Address = consulAddr
+	cc, err := consulapi.NewClient(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	// 2. 使用 go-kit 提供的适配器
+	sdClient := sdconsul.NewClient(cc)
+	instancer := sdconsul.NewInstancer(sdClient, logger, srvName, tags, true)
+
+	// 3. Endpointer
+	endpointer := sd.NewEndpointer(instancer, factory, logger)
+
+	// 4. Balancer
+	balancer := lb.NewRoundRobin(endpointer)
+
+	// 5. retry
+	retry := lb.Retry(3, time.Second, balancer)
+	return retry, nil
+}
+
+func factory(instance string) (endpoint.Endpoint, io.Closer, error) {
+	client := protoconnect.NewTrimClient(http.DefaultClient, instance)
+	e := makeTrimEndpoint(client)
+	return e, nil, nil
 }

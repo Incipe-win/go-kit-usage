@@ -71,8 +71,11 @@ func main() {
 	}
 
 	// trim Service
-	client := protoconnect.NewTrimClient(http.DefaultClient, "http://localhost:9999")
-	trimEndpoint := makeTrimEndpoint(client)
+	trimEndpoint, err := getTrimServiceFromConsul("localhost:8500", logger, "trim_service", nil)
+	if err != nil {
+		fmt.Printf("Failed to get trim service: %v\n", err)
+		return
+	}
 	srv = NewServiceWithTrim(trimEndpoint, srv)
 
 	gs := NewGRPCServer(srv, logger)
